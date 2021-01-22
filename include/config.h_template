@@ -1,0 +1,61 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <Arduino.h>
+
+namespace config {
+    // Setup general properties
+    // -------------------------
+    const bool debug_profile_time = false;
+    
+    // Setup deepsleep properties
+    // ---------------------------
+    // Note: Connect D0/GPIO16 to RST pin of the board beforehand as
+    // this controls the reset pin.
+    const bool use_deepsleep = false;
+    const uint64_t sleepTimeuS = 3600000000;
+    
+    // RTC sleep constants:
+    // ---------------------
+    const bool use_rtcsleep = true;
+    // flags define what calendar component to be checked against the current time in order
+    // to trigger the alarm
+    // A2M2 (minutes) (0 to enable, 1 to disable)
+    // A2M3 (hour)    (0 to enable, 1 to disable) 
+    // A2M4 (day)     (0 to enable, 1 to disable)
+    // DY/DT          (dayofweek == 1/dayofmonth == 0)
+    // Trigger on minutes: { 0, 1, 1, 1}
+    // Trigger on hours:   { 1, 0, 1, 1}
+    const uint8_t rtc_sleep_h = 0;
+    const uint8_t rtc_sleep_m = 1;
+    const uint8_t rtc_match[4] = { 0, 1, 1, 1 };
+    
+    // Setup the wireless network properties
+    // --------------------------------------
+    const char* const ssid = "<SSID>";
+    const char* const password = "<PASSWORD>";
+    const uint8_t wifi_bssid[6] = {0, 0, 0, 0, 0, 0};
+    const uint8 wifi_channel = 0;
+    
+    const uint8_t wifi_address[4] = {192, 168, 1, 254};
+    const uint8_t wifi_gateway[4] = {192, 168, 1, 1};
+    const uint8_t wifi_subnet[4] = {255, 255, 255, 0};
+    const uint8_t wifi_dns1[4] = {1, 1, 1, 1};
+    const uint8_t wifi_dns2[4] = {8, 8, 4, 4};
+    
+    // Setup the MQTT server properties
+    // ---------------------------------
+    const bool use_mqtt = true;
+    const char* const mqttServer = "192.168.1.2";
+    const int mqttPort = 1883;
+    const char* const mqttUser = "<MQTTUSER>";
+    const char* const mqttPassword = "<PASSWORD>>";
+    const char* const mqttChannel = "sensors/waterlevel";
+    
+    // Setup the web server properties
+    // --------------------------------
+    const bool use_webservice = false;
+    const uint8 http_port = 80;
+}
+
+#endif
