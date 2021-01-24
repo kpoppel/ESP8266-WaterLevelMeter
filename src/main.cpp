@@ -12,7 +12,7 @@
 #include "http.h"
 #include "mqtt.h"
 
-#define LED D0
+#define LED D4
 #define TRIG D5
 #define ECHO D6
 
@@ -46,7 +46,7 @@ void go_to_sleep()
         DS3231_clear_a2f();
         // Here the system simply looses power... see you later
 
-        // Never executed when running on battery. On USB power thsi runs too.
+        // Never executed when running on battery. On USB power this runs too.
         int seconds = 0;
         while(!DS3231_triggered_a2()) {
             Serial.printf(" -> wait for alarm2 triggered - %d s\r\n", seconds);
@@ -94,23 +94,6 @@ void go_to_sleep()
  *   
 */
 
-/*
-// Skip the advanced stuff and just use the RTC
-void setup()
-{
-    Serial.begin(115200);
-    Wire.begin();
-    DS3231_init(DS3231_CONTROL_INTCN);
-
-    while(1) {
-        rtc_set_next_alarm();
-        delay(2000);
-    }
-}
-
-void loop() {}
-*/
-
 float sonar_ping()
 {
     // Ping using the ultrasonic sensor to measure distance.
@@ -135,7 +118,12 @@ float sonar_ping()
 void setup()
 {
     if(config::debug_profile_time) debug_print_time("Before setup: ");
-    
+
+    // Development mode - Turn on board LED while we are active
+    pinMode(LED, OUTPUT);
+    //digitalWrite(LED, LOW);  // turn on
+    digitalWrite(LED, HIGH); // turn off
+
     Serial.begin(115200);
 
     // Fastest way to connect to wifi: static IP and pre-selected base station.
@@ -146,7 +134,7 @@ void setup()
 
     // DS3231 RTC initialisation: Initialise the SDA/SCL pins (D1/D2))
     Wire.begin();
-    DS3231_init(DS3231_CONTROL_INTCN);
+    DS3231_init(DS3231_CONTROL_BBSQW | DS3231_CONTROL_INTCN | DS3231_CONTROL_A2IE);
 
     // ****************************************
     // If the RTC clock was reset to 1970 (due to battery change) we setup
@@ -156,12 +144,6 @@ void setup()
 
     // Set the next alarm - we clear the alarm when ready to go to sleep.
     rtc_set_next_alarm();
-
-
-    // Development mode - Turn on board LED while we are active
-    pinMode(LED, OUTPUT);
-    digitalWrite(LED, LOW);  // turn on
-    //digitalWrite(LED, HIGH); // turn off
 
     if(config::use_webservice)
     {
@@ -183,7 +165,6 @@ void loop(void)
      * 3 - Send message via MQTT to Home-Assistant
      * 4 - Sleep (several solutions possible, from deepsleep to turning off power using exernal circuit
      */
-
     // On battery the ultrasound sensor needs some time to start.  We get this time
     // by waiting for wifi first.
     if(wifi_wait_for_connection()) {
@@ -200,7 +181,9 @@ void loop(void)
     // Trigger the ultrasound transceiver
     // On battery operation the first 1-2 samples can be zero or inaccurate as
     // something needs to charge first because power just came on.
+    // Waiting until after Wifi is up helps.
     // Dump the first 2 samples and use the 3rd (but save and send to MQTT receiver)
+    delay(50);
     float distance;
     distance = sonar_ping();
 //    float distance[3];
@@ -211,9 +194,11 @@ void loop(void)
 //    distance[2] = sonar_ping();
 
     // Measure battery level
+    // Conversion factor from measure battery to ADC measurement is
+    // approximately: 0.835 ~= 5/6
     int batt;
     batt = ESP.getVcc();
-
+    batt = (int) (batt * 0.835);
 
     // Measure the temperature
     float temperature;
@@ -258,8 +243,9 @@ void loop(void)
 
     // Do Serial debugging prints
 //    Serial.printf("Water levels are: %.2f, %.2f, %.2f\r\n", distance[0], distance[1], distance[2]);
-    Serial.printf("Water level is    : %.2f cm\r\n", distance);
-    Serial.printf("Battery voltage is: %d mV\r\n", batt);
+    Serial.printf("Water level    : %.2f cm\r\n", distance);
+    Serial.printf("Battery voltage: %d mV\r\n", batt);
+    Serial.printf("Temperature    : %f C\r\n", temperature);
 
     // End the session
     WiFi.disconnect(true);
