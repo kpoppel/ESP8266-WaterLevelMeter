@@ -154,24 +154,21 @@ void loop(void)
 {
     /*
      * Do several tings in the main loop:
-     * 1 - Check if Wifi got lost (development only, the connect routine will keep trying forever)
-     *     Consider though changing it to trying a number of times, then give up until next time slot.
-     * 2 - Perform the measurement
-     *     TODO: I don't know how accurate it is, or a number of measurements has to be made,
-     *     averaging or selecting most common result or whatever.
+     * 1 - Perform the measurement
+     * 2 - Connect to WiFi important this happens after sensor reads because it introduces
+     *     supply variations disturbing the measurements - badly.
      * 3 - Send message via MQTT to Home-Assistant
      * 4 - Sleep (several solutions possible, from deepsleep to turning off power using exernal circuit
      */
-    // On battery the ultrasound sensor needs some time to start.
-    
+   
     if(config::debug_profile_time) debug_print_time("Before measurements: ");
 
     // Measure battery level
-    // Conversion factor from measure battery to ADC measurement is
-    // approximately: 0.835 ~= 5/6
+    // Conversion factor from measure battery to ADC measurement seems to be
+    // linear and not constant.  My mesurements says the relation below should be okay.
     int batt;
     batt = ESP.getVcc();
-    batt = (int) (batt * 0.835);
+    batt = (int) (3.19 * batt - 8412);
 
     // Measure the temperature
     float temperature;
@@ -182,25 +179,16 @@ void loop(void)
     // something needs to charge first because power just came on.
     // Waiting until after Wifi is up helps.
     // Dump the first 2 samples and use the 3rd (but save and send to MQTT receiver)
-//    delay(60);
+
+    //delay(60);
     float distance;
     distance = sonar_ping();
-//    float distance[3];
-//    distance[0] = sonar_ping();
-//    delay(200);
-//    distance[1] = sonar_ping();
-//    delay(200);
-//    distance[2] = sonar_ping();
-
 
     if(config::debug_profile_time) debug_print_time("After measurements: ");
 
     if(config::debug_profile_time) debug_print_time("Before MQTT transmit: ");
 
     // Add measurements to MQTT message
-    //mqtt_add_message("waterlevel", distance[0]);
-    //mqtt_add_message("waterlevel", distance[1]);
-    //mqtt_add_message("waterlevel", distance[2]);
     mqtt_add_message("waterlevel", distance);
     mqtt_add_message("vcc", batt);
     mqtt_add_message("temperature", temperature);
