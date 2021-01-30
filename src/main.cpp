@@ -128,9 +128,6 @@ void setup()
 
     // Fastest way to connect to wifi: static IP and pre-selected base station.
     wifi_setup_static_ip(config::wifi_address, config::wifi_gateway, config::wifi_subnet, config::wifi_dns1, config::wifi_dns2);
-    wifi_fast_connect(config::ssid, config::password, config::wifi_channel, config::wifi_bssid);
-    // Can also just scan the network and find the best matching access point (slower):
-    //wifi_connect(ssid, password);  // scan for best matching SSID
 
     // DS3231 RTC initialisation: Initialise the SDA/SCL pins (D1/D2))
     Wire.begin();
@@ -165,33 +162,9 @@ void loop(void)
      * 3 - Send message via MQTT to Home-Assistant
      * 4 - Sleep (several solutions possible, from deepsleep to turning off power using exernal circuit
      */
-    // On battery the ultrasound sensor needs some time to start.  We get this time
-    // by waiting for wifi first.
-    if(wifi_wait_for_connection()) {
-        // Wifi did not connect. Clear the alarm to power off and wait it out instead.
-        go_to_sleep();
-    }
-
-    // If webserver should run
-    if (config::use_webservice)
-      http_loop();
-  
+    // On battery the ultrasound sensor needs some time to start.
+    
     if(config::debug_profile_time) debug_print_time("Before measurements: ");
-
-    // Trigger the ultrasound transceiver
-    // On battery operation the first 1-2 samples can be zero or inaccurate as
-    // something needs to charge first because power just came on.
-    // Waiting until after Wifi is up helps.
-    // Dump the first 2 samples and use the 3rd (but save and send to MQTT receiver)
-    delay(50);
-    float distance;
-    distance = sonar_ping();
-//    float distance[3];
-//    distance[0] = sonar_ping();
-//    delay(200);
-//    distance[1] = sonar_ping();
-//    delay(200);
-//    distance[2] = sonar_ping();
 
     // Measure battery level
     // Conversion factor from measure battery to ADC measurement is
@@ -204,6 +177,22 @@ void loop(void)
     float temperature;
     temperature = DS3231_get_treg();
 
+    // Trigger the ultrasound transceiver
+    // On battery operation the first 1-2 samples can be zero or inaccurate as
+    // something needs to charge first because power just came on.
+    // Waiting until after Wifi is up helps.
+    // Dump the first 2 samples and use the 3rd (but save and send to MQTT receiver)
+//    delay(60);
+    float distance;
+    distance = sonar_ping();
+//    float distance[3];
+//    distance[0] = sonar_ping();
+//    delay(200);
+//    distance[1] = sonar_ping();
+//    delay(200);
+//    distance[2] = sonar_ping();
+
+
     if(config::debug_profile_time) debug_print_time("After measurements: ");
 
     if(config::debug_profile_time) debug_print_time("Before MQTT transmit: ");
@@ -215,6 +204,19 @@ void loop(void)
     mqtt_add_message("waterlevel", distance);
     mqtt_add_message("vcc", batt);
     mqtt_add_message("temperature", temperature);
+
+    // WiFi draws some current and may cause unstable ADC readings, so connect Wii when needed.
+    wifi_fast_connect(config::ssid, config::password, config::wifi_channel, config::wifi_bssid);
+    // Can also just scan the network and find the best matching access point (slower):
+    //wifi_connect(ssid, password);  // scan for best matching SSID
+    if(wifi_wait_for_connection()) {
+        // Wifi did not connect. Clear the alarm to power off and wait it out instead.
+        go_to_sleep();
+    }
+
+    // If webserver should run
+    if (config::use_webservice)
+      http_loop();
 
     // Finally wait for connection to WiFi and transmit data, then end the connection.
     if(config::use_mqtt)
