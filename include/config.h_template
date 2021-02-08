@@ -24,11 +24,15 @@ namespace config {
     // A2M3 (hour)    (0 to enable, 1 to disable) 
     // A2M4 (day)     (0 to enable, 1 to disable)
     // DY/DT          (dayofweek == 1/dayofmonth == 0)
-    // Trigger on minutes: { 0, 1, 1, 1}
-    // Trigger on hours:   { 1, 0, 1, 1}
-    const uint8_t rtc_sleep_h = 0;
-    const uint8_t rtc_sleep_m = 1;
-    const uint8_t rtc_match[4] = { 0, 1, 1, 1 };
+    //                       {M2, M3, M4, DY/DT}
+    // Trigger every minute: { 1, 1, 1, 1}
+    // Trigger on minutes:   { 0, 1, 1, 1}
+    // Trigger on hours+min: { 0, 0, 1, 1}
+    // Trigger on date+h+m:  { 0, 0, 0, 0}
+    // Trigger on day+h+m:   { 0, 0, 0, 1}
+    const uint8_t rtc_sleep_h = 1;
+    const uint8_t rtc_sleep_m = 0;
+    const uint8_t rtc_match[4] = { 0, 0, 1, 1 };
     
     // Setup the wireless network properties
     // --------------------------------------
